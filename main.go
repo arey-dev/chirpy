@@ -44,11 +44,11 @@ func main() {
 
 	mux.Handle("/app/", http.StripPrefix("/app", cfg.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
 
-	mux.HandleFunc("GET /metrics", cfg.handlerGetFileserverHits)
+	mux.HandleFunc("GET /api/metrics", cfg.handlerGetFileserverHits)
 
-	mux.HandleFunc("POST /reset", cfg.handlerResetFileserverHits)
+	mux.HandleFunc("POST /api/reset", cfg.handlerResetFileserverHits)
 
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(200)
 		w.Write([]byte("OK"))
