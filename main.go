@@ -47,6 +47,8 @@ func main() {
 		w.WriteHeader(200)
 		w.Write([]byte("OK"))
 	})
+
+	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
 	
 	server := &http.Server{
 		Handler: mux,
