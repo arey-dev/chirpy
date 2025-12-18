@@ -3,58 +3,35 @@ package main
 import (
 	"net/http"
 	"encoding/json"
-	"log"
 )
 
-type ValidateChirpyRequest struct {
-	Body string `json:"body"`
-}
-
-type APIResponse struct {
-	Valid bool `json:"valid"`
-}
-
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
 func handlerValidateChirp(w http.ResponseWriter, req *http.Request) {	
+	type requestParams struct {
+		Body string `json:"body"`
+	}
+
+	type jsonResponse struct {
+		Valid bool `json:"valid"`
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 
-	chirpMaxLen := 140
+	const chirpMaxLen = 140
 
 	decoder := json.NewDecoder(req.Body)
-	reqBody := ValidateChirpyRequest{}
+	reqBody := requestParams{}
 	err := decoder.Decode(&reqBody)
 	if err != nil {
-		log.Printf("Error decoding request body: %s\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Error: "Something went wrong",
-		})
+		respondWithError(w, http.StatusInternalServerError, "Error decoding request", err)
 		return
 	}
 
 	if len(reqBody.Body) > chirpMaxLen {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Error: "Chirp is too long",
-		})
+		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
 		return
 	} 
 
-	data, err := json.Marshal(APIResponse{
+	respondWithJSON(w, http.StatusOK, jsonResponse{
 		Valid: true,
 	})
-	if err != nil {
-		log.Printf("Error marshalling api response: %s\n", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
-			Error: "Something went wrong",
-		})
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(data)
 }
