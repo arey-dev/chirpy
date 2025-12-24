@@ -16,6 +16,7 @@ import _ "github.com/lib/pq"
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db *database.Queries
+	platform string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -35,8 +36,21 @@ func (cfg *apiConfig) handlerGetFileserverHits(w http.ResponseWriter, req *http.
 }
 
 func (cfg *apiConfig) handlerResetFileserverHits(w http.ResponseWriter, req *http.Request) {
-	w.WriteHeader(200)
-	cfg.fileserverHits.Swap(0)
+	w.Header().Set("Content-Type", "application/json")
+
+	if cfg.platform != "dev" {
+		respondWithError(w, http.StatusForbidden, "Error deleting users", nil)
+		return
+	}
+
+	err := cfg.db.DeleteUsers(req.Context())
+
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error deleting users", err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, nil)
 }
 
 func main() {
@@ -54,6 +68,7 @@ func main() {
 	mux := http.NewServeMux()
 	cfg := apiConfig{
 		db: dbQueries,
+		platform: os.Getenv("PLATFORM"),
 	}
 
 	mux.Handle("/app/", http.StripPrefix("/app", cfg.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
@@ -66,6 +81,10 @@ func main() {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(200)
 		w.Write([]byte("OK"))
+	})
+
+	mux.HandleFunc("POST /api/users", func(w http.ResponseWriter, req *http.Request) {
+		handlerCreateUser(&cfg, w, req)
 	})
 
 	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
