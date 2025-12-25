@@ -17,8 +17,6 @@ type Chirp struct {
 }
 
 func createChirp(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	type Params struct {
 		Body string `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -58,4 +56,27 @@ func createChirp(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
 		Body: chirp.Body,
 		UserID: chirp.UserID,
 	})
+}
+
+func getAllChirps(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
+	chirps, err := cfg.db.GetChirps(req.Context())
+
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error fetching chirps", err)
+		return
+	}
+
+	chirpsRes := []Chirp{}
+
+	for _, chirp := range chirps {
+		chirpsRes = append(chirpsRes, Chirp{
+			ID: chirp.ID,
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body: chirp.Body,
+			UserID: chirp.UserID,
+		})
+	}
+
+	respondWithJSON(w, http.StatusOK, chirpsRes)
 }

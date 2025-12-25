@@ -89,6 +89,10 @@ func main() {
 	mux.HandleFunc("POST /api/chirps", func(w http.ResponseWriter, req *http.Request) {
 		createChirp(&cfg, w, req)
 	})
+
+	mux.HandleFunc("GET /api/chirps", func(w http.ResponseWriter, req *http.Request) {
+		getAllChirps(&cfg, w, req)
+	})
 	
 	server := &http.Server{
 		Handler: mux,
