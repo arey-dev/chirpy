@@ -40,7 +40,6 @@ func (cfg *apiConfig) handlerResetFileserverHits(w http.ResponseWriter, req *htt
 
 	if cfg.platform != "dev" {
 		respondWithError(w, http.StatusForbidden, "Error deleting users", nil)
-		return
 	}
 
 	err := cfg.db.DeleteUsers(req.Context())
@@ -87,7 +86,9 @@ func main() {
 		handlerCreateUser(&cfg, w, req)
 	})
 
-	mux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+	mux.HandleFunc("POST /api/chirps", func(w http.ResponseWriter, req *http.Request) {
+		createChirp(&cfg, w, req)
+	})
 	
 	server := &http.Server{
 		Handler: mux,
