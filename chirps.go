@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"github.com/google/uuid"
+	"strings"
 	"encoding/json"
 	"time"
 	"github.com/arey-dev/chirpy/internal/database"
@@ -79,4 +80,33 @@ func getAllChirps(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, chirpsRes)
+}
+
+func getChirp(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
+	chirpID, err := uuid.Parse(req.PathValue("chirpID"))
+
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error parsing path value", err)
+		return
+	}
+	chirp, err := cfg.db.GetChirp(req.Context(), chirpID)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			respondWithError(w, http.StatusNotFound, "Chirp Not Found", err)
+			return
+		}
+
+		respondWithError(w, http.StatusInternalServerError, "Error fetching chirps", err)
+		return
+	}
+
+
+	respondWithJSON(w, http.StatusOK, Chirp{
+		ID: chirp.ID,
+		CreatedAt: chirp.CreatedAt,
+		UpdatedAt: chirp.UpdatedAt,
+		Body: chirp.Body,
+		UserID: chirp.UserID,
+	})
 }
