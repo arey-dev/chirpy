@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"time"
 	"github.com/google/uuid"
+	"github.com/arey-dev/chirpy/internal/database"
+	"github.com/arey-dev/chirpy/internal/auth"
 )
 
 type User struct {
@@ -18,7 +20,8 @@ func handlerCreateUser(cfg *apiConfig, w http.ResponseWriter, req *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 
 	type requestBody struct {
-		Email string `json:email`
+		Email string `json:"email"`
+		Password string `json:"password"`
 	}
 
 	decoder := json.NewDecoder(req.Body)
@@ -30,7 +33,19 @@ func handlerCreateUser(cfg *apiConfig, w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	user, err := cfg.db.CreateUser(req.Context(), reqBody.Email)
+	hashedPassword, err := auth.HashPassword(reqBody.Password)
+
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error(), err)
+		return
+	}
+
+	createUserParams := database.CreateUserParams{
+		Email: reqBody.Email,
+		HashedPassword: hashedPassword,
+	}
+
+	user, err := cfg.db.CreateUser(req.Context(),createUserParams)
 
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error Creating User", err)
