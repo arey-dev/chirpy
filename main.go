@@ -87,7 +87,11 @@ func main() {
 	})
 
 	mux.HandleFunc("POST /api/users", func(w http.ResponseWriter, req *http.Request) {
-		handlerCreateUser(&cfg, w, req)
+		createUser(&cfg, w, req)
+	})
+
+	mux.HandleFunc("PUT /api/users", func(w http.ResponseWriter, req *http.Request) {
+		updateUser(&cfg, w, req)
 	})
 
 	mux.HandleFunc("POST /api/chirps", func(w http.ResponseWriter, req *http.Request) {
