@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"time"
 	"github.com/arey-dev/chirpy/internal/database"
+	"github.com/arey-dev/chirpy/internal/auth"
 )
 
 type Chirp struct {
@@ -20,7 +21,6 @@ type Chirp struct {
 func createChirp(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
 	type Params struct {
 		Body string `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
 	}
 
 	decoder := json.NewDecoder(req.Body)
@@ -29,6 +29,21 @@ func createChirp(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
 	
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error decoding request", err)
+		return
+	}
+
+	// check if user is authenticated
+	bearerToken, err := auth.GetBearerToken(req.Header)
+
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
+		return
+	}
+
+	UserID, err := auth.ValidateJWT(bearerToken, cfg.jwtSecret)
+
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
 		return
 	}
 
@@ -42,7 +57,7 @@ func createChirp(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
 	params.Body = validChirp
 	chirp, err := cfg.db.CreateChirp(req.Context(), database.CreateChirpParams{
 		Body: validChirp,
-		UserID: params.UserID,
+		UserID: UserID,
 	})
 
 	if err != nil {

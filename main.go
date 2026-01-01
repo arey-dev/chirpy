@@ -17,6 +17,8 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db *database.Queries
 	platform string
+	jwtSecret string
+	jwtTTL string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -68,6 +70,8 @@ func main() {
 	cfg := apiConfig{
 		db: dbQueries,
 		platform: os.Getenv("PLATFORM"),
+		jwtSecret: os.Getenv("JWT_SECRET"),
+		jwtTTL: os.Getenv("JWT_TTL"),
 	}
 
 	mux.Handle("/app/", http.StripPrefix("/app", cfg.middlewareMetricsInc(http.FileServer(http.Dir(".")))))
@@ -100,6 +104,14 @@ func main() {
 
 	mux.HandleFunc("POST /api/login", func(w http.ResponseWriter, req *http.Request) {
 		loginUser(&cfg, w, req)
+	})
+
+	mux.HandleFunc("POST /api/refresh", func(w http.ResponseWriter, req *http.Request) {
+		issueNewToken(&cfg, w, req)
+	})
+
+	mux.HandleFunc("POST /api/revoke", func(w http.ResponseWriter, req *http.Request) {
+		revokeToken(&cfg, w, req)
 	})
 	
 	server := &http.Server{
