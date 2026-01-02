@@ -125,3 +125,51 @@ func getChirp(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
 		UserID: chirp.UserID,
 	})
 }
+
+func deleteChirp(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
+	// check if user is authenticated
+	token, err := auth.GetBearerToken(req.Header)
+
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
+		return
+	}
+
+	UserID, err := auth.ValidateJWT(token, cfg.jwtSecret)
+
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
+		return
+	}
+
+	chirpID, err := uuid.Parse(req.PathValue("chirpID"))
+
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error parsing path value", err)
+		return
+	}
+
+	chirp, err := cfg.db.GetChirp(req.Context(), chirpID)
+	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			respondWithError(w, http.StatusNotFound, "Chirp Not Found", err)
+			return
+		}
+
+		respondWithError(w, http.StatusInternalServerError, "Error deleting chirps", err)
+		return
+	}
+
+	if chirp.UserID != UserID {
+		respondWithError(w, http.StatusForbidden, "Error deleting chirps", err)
+		return
+	}
+
+	err = cfg.db.DeleteChirp(req.Context(), chirpID)
+	if chirp.UserID != UserID {
+		respondWithError(w, http.StatusInternalServerError, "Error deleting chirps", err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusNoContent, struct{}{})
+}
