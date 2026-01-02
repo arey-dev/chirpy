@@ -21,3 +21,10 @@ SET
   updated_at = now()
 WHERE id = $3
 RETURNING *;
+
+-- name: UpdateUserToChirpyRed :one
+UPDATE users
+SET 
+  is_chirpy_red = true
+where id = $1
+RETURNING *;

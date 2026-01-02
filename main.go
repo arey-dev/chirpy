@@ -122,6 +122,10 @@ func main() {
 		revokeToken(&cfg, w, req)
 	})
 	
+	mux.HandleFunc("POST /api/polka/webhooks", func(w http.ResponseWriter, req *http.Request) {
+		handleWebhooks(&cfg, w, req)
+	})
+	
 	server := &http.Server{
 		Handler: mux,
 		Addr: ":8080",
