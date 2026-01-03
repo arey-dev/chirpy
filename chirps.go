@@ -6,6 +6,7 @@ import (
 	"strings"
 	"encoding/json"
 	"time"
+	"sort"
 	"github.com/arey-dev/chirpy/internal/database"
 	"github.com/arey-dev/chirpy/internal/auth"
 )
@@ -75,11 +76,39 @@ func createChirp(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
 }
 
 func getAllChirps(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
-	chirps, err := cfg.db.GetChirps(req.Context())
+	author_id := req.URL.Query().Get("author_id")
+	var sortVal string
 
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Error fetching chirps", err)
-		return
+	if s := req.URL.Query().Get("sort"); s == "" {
+		sortVal = "asc"
+	} else {
+		sortVal = s
+	}
+
+
+	var chirps []database.Chirp
+	if author_id != "" {
+		userID, err := uuid.Parse(author_id)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Error parsing path value", err)
+			return
+		}
+
+		data, err := cfg.db.GetUserChirps(req.Context(), userID)
+		chirps = data
+
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Error fetching chirps", err)
+			return
+		}
+	} else {
+		data, err := cfg.db.GetChirps(req.Context())
+		chirps = data
+
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "Error fetching chirps", err)
+			return
+		}
 	}
 
 	chirpsRes := []Chirp{}
@@ -94,6 +123,11 @@ func getAllChirps(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
 		})
 	}
 
+	if sortVal == "desc" {
+		sort.Slice(chirpsRes, func(i, j int) bool { return chirpsRes[i].CreatedAt.After(chirpsRes[j].CreatedAt) })
+	} else {
+		sort.Slice(chirpsRes, func(i, j int) bool { return chirpsRes[i].CreatedAt.Before(chirpsRes[j].CreatedAt) })
+	}
 	respondWithJSON(w, http.StatusOK, chirpsRes)
 }
 

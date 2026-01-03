@@ -19,6 +19,7 @@ type apiConfig struct {
 	platform string
 	jwtSecret string
 	jwtTTL string
+	polkaKey string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -72,6 +73,7 @@ func main() {
 		platform: os.Getenv("PLATFORM"),
 		jwtSecret: os.Getenv("JWT_SECRET"),
 		jwtTTL: os.Getenv("JWT_TTL"),
+		polkaKey: os.Getenv("POLKA_KEY"),
 	}
 
 	mux.Handle("/app/", http.StripPrefix("/app", cfg.middlewareMetricsInc(http.FileServer(http.Dir(".")))))

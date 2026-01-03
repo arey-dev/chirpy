@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"github.com/google/uuid"
+	"github.com/arey-dev/chirpy/internal/auth"
 )
 
 type EventType string
@@ -12,6 +13,17 @@ type EventType string
 const EventUserUpgraded EventType = "user.upgraded"
 
 func handleWebhooks(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
+	apiKey, err := auth.GetAPIKey(req.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error(), err)
+		return
+	}
+
+	if apiKey != cfg.polkaKey {
+		respondWithError(w, http.StatusUnauthorized, "invalid api key", err)
+		return
+	}
+
 	type RequestBody struct {
 		Event string `json:"event"`
 		Data struct {
@@ -21,7 +33,7 @@ func handleWebhooks(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
 
 	decoder := json.NewDecoder(req.Body)
 	reqBody := RequestBody{}
-	err := decoder.Decode(&reqBody)
+	err = decoder.Decode(&reqBody)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Error decoding request", err)
 		return
@@ -31,7 +43,6 @@ func handleWebhooks(cfg *apiConfig, w http.ResponseWriter, req *http.Request) {
 		respondWithJSON(w, http.StatusNoContent, struct{}{})
 		return
 	}
-
 
 	userID, err := uuid.Parse(reqBody.Data.UserID)
 	if err != nil {
